@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Yu Gothic', 'Meiryo', sans-serif;
+      font-size: 13px;
+      background: #f8f9fa;
+      color: #333;
+      padding: 20px;
+    }
+
+    h2 {
+      font-size: 15px;
+      color: #1F4E79;
+      border-bottom: 2px solid #2E5C8A;
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: bold;
+      color: #444;
+      margin-bottom: 4px;
+    }
+
+    label .required {
+      color: #c0392b;
+      margin-left: 3px;
+    }
+
+    select, input[type="text"], input[type="date"] {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: inherit;
+      background: #fff;
+      transition: border-color 0.2s;
+    }
+
+    select:focus, input:focus {
+      outline: none;
+      border-color: #2E5C8A;
+      box-shadow: 0 0 0 2px rgba(46,92,138,0.12);
+    }
+
+    .field-hint {
+      font-size: 11px;
+      color: #888;
+      margin-top: 5px;
+      line-height: 1.5;
+    }
+
+    .preview-box {
+      background: #EBF3FB;
+      border: 1px solid #2E5C8A;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .preview-label {
+      font-size: 11px;
+      color: #2E5C8A;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    .preview-number {
+      font-size: 20px;
+      font-weight: bold;
+      color: #1F4E79;
+      letter-spacing: 2px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .preview-note {
+      font-size: 10px;
+      color: #888;
+      margin-top: 2px;
+    }
+
+    .btn-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    button {
+      padding: 8px 22px;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    #btnSubmit {
+      background: #2E5C8A;
+      color: #fff;
+    }
+
+    #btnSubmit:hover    { background: #1F4E79; }
+    #btnSubmit:disabled { background: #aaa; cursor: not-allowed; }
+
+    #btnCancel {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    #btnCancel:hover { background: #ccc; }
+
+    .msg {
+      margin-top: 10px;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      display: none;
+    }
+
+    .msg.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: block; }
+    .msg.error   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; display: block; }
+    .msg.loading { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; display: block; }
+  </style>
+</head>
+<body>
+
+<h2>📐 主図番 発行申請</h2>
+
+<!-- 発行後の主図番プレビュー -->
+<div class="preview-box">
+  <div>
+    <div class="preview-label">発行される主図番（プレビュー）</div>
+    <div class="preview-number" id="previewNumber">——</div>
+    <div class="preview-note">※ 部署・着手日を選択するとプレビューが表示されます</div>
+  </div>
+</div>
+
+<!-- 部署選択 -->
+<div class="form-group">
+  <label>部署 <span class="required">*</span></label>
+  <select id="deptSelect" onchange="updatePreview()">
+    <option value="">― 選択してください ―</option>
+  </select>
+</div>
+
+<!-- 機械名（日本語） -->
+<div class="form-group">
+  <label>機械名（日本語） <span class="required">*</span></label>
+  <input type="text" id="modelNameJp" placeholder="例：扇形チップ溶接機" />
+</div>
+
+<!-- 機械名（英語・任意） -->
+<div class="form-group">
+  <label>機械名（英語）</label>
+  <input type="text" id="modelNameEn" placeholder="例：CTW2021（任意）" />
+</div>
+
+<!-- 着手日 -->
+<div class="form-group">
+  <label>着手日 <span class="required">*</span></label>
+  <input type="date" id="startDate" onchange="updatePreview()" />
+</div>
+
+<!-- CADデータフォルダ -->
+<div class="form-group">
+  <label>CADデータフォルダ <span class="required">*</span></label>
+  <input type="text" id="cadFolderUrl" placeholder="例：https://drive.google.com/drive/folders/xxxxxxxx" />
+  <div class="field-hint">
+    あらかじめ空のフォルダを作成しておき、エクスプローラーで対象フォルダを右クリック→
+    「Google Drive」→「リンクをクリップボードにコピー」で取得したリンクを貼り付けてください。
+  </div>
+</div>
+
+<!-- 備考 -->
+<div class="form-group">
+  <label>備考（任意）</label>
+  <input type="text" id="note" placeholder="例：○○プロジェクト向け" />
+</div>
+
+<div class="btn-row">
+  <button id="btnCancel" onclick="google.script.host.close()">キャンセル</button>
+  <button id="btnSubmit" onclick="submitForm()">発行する</button>
+</div>
+
+<div class="msg" id="msg"></div>
+
+<script>
+  // ── 部署リストの初期化（Code.gsからテンプレート変数で渡される） ──
+  const DEPT_LIST = <?!= deptList ?>;
+  const TODAY     = '<?!= today ?>';
+
+  window.onload = function() {
+    const sel = document.getElementById('deptSelect');
+    DEPT_LIST.forEach(d => {
+      const opt        = document.createElement('option');
+      opt.value        = d.code;
+      opt.textContent  = `${d.name}（${d.code}）`;
+      opt.dataset.name = d.name;
+      sel.appendChild(opt);
+    });
+
+    // 着手日のデフォルトを今日に設定
+    document.getElementById('startDate').value = TODAY;
+
+    // 部署が1つだけなら自動選択
+    if (DEPT_LIST.length === 1) {
+      sel.value = DEPT_LIST[0].code;
+    }
+
+    // 初期プレビューを更新
+    updatePreview();
+  };
+
+  // 部署または着手日が変わったらプレビューを更新
+  function updatePreview() {
+    const code      = document.getElementById('deptSelect').value;
+    const startDate = document.getElementById('startDate').value;
+
+    if (!code || !startDate) {
+      document.getElementById('previewNumber').textContent = '——';
+      return;
+    }
+
+    const year = startDate.slice(2, 4);  // 西暦下2桁（例："26"）
+
+    google.script.run
+      .withSuccessHandler(function(nextSeq) {
+        const padded = String(nextSeq).padStart(2, '0');
+        document.getElementById('previewNumber').textContent = code + year + padded;
+      })
+      .withFailureHandler(function() {
+        document.getElementById('previewNumber').textContent = code + year + '??';
+      })
+      .getNextSequenceForPreview({ deptCode: code, year: year });
+  }
+
+  function submitForm() {
+    const deptSelect  = document.getElementById('deptSelect');
+    const modelNameJp = document.getElementById('modelNameJp').value.trim();
+    const modelNameEn = document.getElementById('modelNameEn').value.trim();
+    const startDate   = document.getElementById('startDate').value;
+    const cadFolderUrl = document.getElementById('cadFolderUrl').value.trim();
+    const note        = document.getElementById('note').value.trim();
+    const deptCode    = deptSelect.value;
+    const deptName    = deptSelect.options[deptSelect.selectedIndex]?.dataset.name || '';
+
+    // クライアント側バリデーション
+    if (!deptCode) {
+      showMsg('error', '部署を選択してください。');
+      return;
+    }
+    if (!modelNameJp) {
+      showMsg('error', '機械名（日本語）を入力してください。');
+      return;
+    }
+    if (!startDate) {
+      showMsg('error', '着手日を入力してください。');
+      return;
+    }
+    if (!cadFolderUrl) {
+      showMsg('error', 'CADデータフォルダのリンクを貼り付けてください。');
+      return;
+    }
+
+    // 送信
+    document.getElementById('btnSubmit').disabled = true;
+    showMsg('loading', '採番・登録中です。しばらくお待ちください…');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        document.getElementById('btnSubmit').disabled = false;
+        if (result.success) {
+          showMsg('success', `✅ ${result.message}\n\n機械台帳に登録されました。`);
+          // 2秒後にダイアログを閉じ、機械台帳の登録行へ移動
+          setTimeout(() => {
+            google.script.host.close();
+            google.script.run.activateMainNumberRow(result.lastRow);
+          }, 2000);
+        } else {
+          showMsg('error', `❌ ${result.message}`);
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('btnSubmit').disabled = false;
+        showMsg('error', `通信エラーが発生しました：${err.message}`);
+      })
+      .issueMainNumber({ deptCode, deptName, modelNameJp, modelNameEn, startDate, cadFolderUrl, note });
+  }
+
+  function showMsg(type, text) {
+    const el = document.getElementById('msg');
+    el.className        = 'msg ' + type;
+    el.style.whiteSpace = 'pre-wrap';
+    el.textContent      = text;
+  }
+</script>
+</body>
+</html>

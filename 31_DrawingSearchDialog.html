@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Yu Gothic', 'Meiryo', sans-serif;
+      font-size: 13px;
+      background: #f8f9fa;
+      color: #333;
+      padding: 16px 18px;
+    }
+
+    h2 {
+      font-size: 15px;
+      color: #1F4E79;
+      border-bottom: 2px solid #2E5C8A;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+
+    /* 検索バー */
+    .search-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .search-bar input[type="text"] {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .search-bar input[type="text"]:focus {
+      outline: none;
+      border-color: #2E5C8A;
+      box-shadow: 0 0 0 2px rgba(46,92,138,0.12);
+    }
+    .search-bar button {
+      background: #2E5C8A;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      padding: 8px 20px;
+      font-size: 13px;
+      font-weight: bold;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .search-bar button:hover:not(:disabled) { background: #1F4E79; }
+    .search-bar button:disabled { background: #aaa; cursor: not-allowed; }
+
+    .hint { font-size: 11px; color: #888; margin-bottom: 14px; }
+
+    /* 検索対象トグル */
+    .target-toggle-row {
+      display: flex;
+      gap: 18px;
+      margin-bottom: 10px;
+    }
+    .target-toggle {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12.5px;
+      font-weight: bold;
+      color: #444;
+      cursor: pointer;
+    }
+    .target-toggle input { cursor: pointer; }
+
+    /* 絞り込みフィルタパネル */
+    .filter-panel {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+    .filter-row {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .filter-row:last-child { margin-bottom: 0; }
+    .filter-field {
+      flex: 1;
+      min-width: 150px;
+    }
+    .filter-field-wide { flex: 2; min-width: 260px; }
+    .filter-field label {
+      display: block;
+      font-size: 11px;
+      font-weight: bold;
+      color: #777;
+      margin-bottom: 3px;
+    }
+    .filter-field input[type="text"],
+    .filter-field input[type="date"] {
+      width: 100%;
+      padding: 6px 9px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 12.5px;
+      font-family: inherit;
+    }
+    .filter-field input[type="text"]:focus,
+    .filter-field input[type="date"]:focus {
+      outline: none;
+      border-color: #2E5C8A;
+      box-shadow: 0 0 0 2px rgba(46,92,138,0.12);
+    }
+    .filter-date-range {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .filter-date-range input[type="date"] { flex: 1; }
+    .filter-date-range span { color: #888; font-size: 12px; }
+    .filter-size-checks {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding-top: 4px;
+    }
+    .filter-size-checks label {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 12px;
+      font-weight: normal;
+      color: #444;
+      cursor: pointer;
+    }
+    .filter-divider {
+      font-size: 10.5px;
+      font-weight: bold;
+      color: #aaa;
+      margin: 4px 0 8px;
+      padding-top: 8px;
+      border-top: 1px dashed #e6e6e6;
+    }
+    /* 図面台帳のみの項目：機械のみ検索時にグレーアウトする */
+    .filter-drawing-only.disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    .filter-drawing-only.disabled input { background: #f2f2f2; }
+
+    /* タブ切り替え */
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 14px;
+      border-bottom: 2px solid #dbe6f0;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: bold;
+      font-family: inherit;
+      color: #888;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+    }
+    .tab-btn.active {
+      color: #1F4E79;
+      border-bottom-color: #2E5C8A;
+    }
+    .tab-btn:hover:not(.active) { color: #2E5C8A; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* 類似図面検索：アップロードエリア */
+    .upload-area {
+      border: 2px dashed #cfe0f0;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      background: #f8fbff;
+      margin-bottom: 14px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .upload-area.drag-over {
+      background: #EBF3FB;
+      border-color: #2E5C8A;
+    }
+    .upload-hint {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 8px;
+      pointer-events: none;
+    }
+    .upload-area input[type="file"] { font-size: 12px; }
+    .upload-filename {
+      font-size: 12px;
+      color: #1F4E79;
+      font-weight: bold;
+      margin-top: 8px;
+    }
+    .btn-similar-search {
+      background: #2E5C8A;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      padding: 8px 24px;
+      font-size: 13px;
+      font-weight: bold;
+      font-family: inherit;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .btn-similar-search:hover:not(:disabled) { background: #1F4E79; }
+    .btn-similar-search:disabled { background: #aaa; cursor: not-allowed; }
+
+    .query-summary-box {
+      background: #EBF3FB;
+      border: 1px solid #cfe0f0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 14px;
+      font-size: 12.5px;
+      color: #333;
+    }
+    .query-summary-box .k { font-weight: bold; color: #1F4E79; }
+
+    .similar-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 7px;
+      padding: 10px 14px;
+      margin-bottom: 7px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .similar-card:hover {
+      border-color: #2E5C8A;
+      box-shadow: 0 1px 4px rgba(46,92,138,0.12);
+    }
+    .similar-score {
+      flex-shrink: 0;
+      width: 52px;
+      text-align: center;
+    }
+    .similar-score .pct {
+      font-size: 16px;
+      font-weight: bold;
+      color: #1F4E79;
+    }
+    .similar-score .bar-track {
+      width: 100%;
+      height: 4px;
+      background: #e6e6e6;
+      border-radius: 2px;
+      margin-top: 3px;
+      overflow: hidden;
+    }
+    .similar-score .bar-fill {
+      height: 100%;
+      background: #2E5C8A;
+    }
+    .similar-main { flex: 1; min-width: 0; }
+    .similar-summary {
+      font-size: 11.5px;
+      color: #777;
+      margin-top: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* CADフォルダ編集フォーム */
+    .form-group { margin-bottom: 10px; }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: bold;
+      color: #444;
+      margin-bottom: 4px;
+    }
+    .form-group input[type="text"] {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .form-group input[type="text"]:focus {
+      outline: none;
+      border-color: #2E5C8A;
+      box-shadow: 0 0 0 2px rgba(46,92,138,0.12);
+    }
+    .search-bar-save-btn {
+      background: #2E5C8A;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      padding: 6px 18px;
+      font-size: 12px;
+      font-weight: bold;
+      font-family: inherit;
+      cursor: pointer;
+      margin-bottom: 12px;
+    }
+    .search-bar-save-btn:hover:not(:disabled) { background: #1F4E79; }
+    .search-bar-save-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+    /* 結果セクション */
+    .section-title {
+      font-size: 12px;
+      font-weight: bold;
+      color: #2E5C8A;
+      margin: 14px 0 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .section-title .count {
+      background: #EBF3FB;
+      color: #1F4E79;
+      font-size: 11px;
+      padding: 1px 8px;
+      border-radius: 10px;
+    }
+
+    .result-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 7px;
+      padding: 9px 12px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .result-card:hover {
+      border-color: #2E5C8A;
+      box-shadow: 0 1px 4px rgba(46,92,138,0.12);
+    }
+    .result-main { flex: 1; min-width: 0; }
+    .result-actions {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .result-no {
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      color: #1F4E79;
+      font-size: 12.5px;
+    }
+    .result-name {
+      font-size: 13px;
+      font-weight: bold;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .result-sub { font-size: 11px; color: #888; margin-top: 2px; }
+    .result-badge {
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 3px 10px;
+      border-radius: 12px;
+      white-space: nowrap;
+    }
+    .badge-status-検図中       { background: #FFF3CD; color: #856404; }
+    .badge-status-課長承認待ち { background: #D1ECF1; color: #0C5460; }
+    .badge-status-部長承認待ち { background: #D4EDDA; color: #155724; }
+    .badge-status-承認済     { background: #cfe2ff; color: #084298; }
+    .badge-status-過去図面   { background: #e2d9f3; color: #4a2e7a; }
+    .badge-main { background: #eee; color: #555; }
+
+    /* 結果一覧から直接ファイル／フォルダを開くアイコンリンク */
+    .result-open-link {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      font-size: 15px;
+      text-decoration: none;
+      background: #f5f7fa;
+      border: 1px solid #dbe6f0;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .result-open-link:hover {
+      background: #EBF3FB;
+      border-color: #2E5C8A;
+    }
+
+    .empty-msg, .loading-msg {
+      text-align: center;
+      color: #888;
+      padding: 30px 0;
+      font-size: 13px;
+    }
+    .spinner {
+      display: inline-block;
+      width: 20px; height: 20px;
+      border: 3px solid #ddd;
+      border-top-color: #2E5C8A;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 詳細パネル */
+    .back-btn {
+      background: none;
+      border: 1px solid #2E5C8A;
+      color: #2E5C8A;
+      padding: 5px 14px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      margin-bottom: 12px;
+    }
+    .back-btn:hover { background: #EBF3FB; }
+
+    .detail-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #1F4E79;
+      margin-bottom: 2px;
+    }
+    .detail-subtitle { font-size: 12px; color: #888; margin-bottom: 14px; }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 110px 1fr 110px 1fr;
+      gap: 6px 10px;
+      background: #fff;
+      border: 1px solid #e6e6e6;
+      border-radius: 7px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      font-size: 12.5px;
+    }
+    .info-grid .k { color: #888; font-weight: bold; }
+    .info-grid .v { word-break: break-all; }
+    .info-grid .v a { color: #2E5C8A; }
+
+    .detail-section-title {
+      font-size: 12.5px;
+      font-weight: bold;
+      color: #1F4E79;
+      margin: 16px 0 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #dbe6f0;
+    }
+
+    table.history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      background: #fff;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    table.history-table th {
+      background: #f5f7fa;
+      text-align: left;
+      padding: 7px 10px;
+      color: #555;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    table.history-table td {
+      padding: 7px 10px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    table.history-table tr.current-row { background: #EBF3FB; }
+    table.history-table tr.current-row td:first-child { font-weight: bold; color: #1F4E79; }
+
+    .file-link-row { margin-top: 12px; }
+    .file-link-row a {
+      color: #2E5C8A;
+      font-size: 12.5px;
+      text-decoration: none;
+    }
+    .file-link-row a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<h2>🔍 図面検索</h2>
+
+<div class="tab-bar">
+  <button class="tab-btn active" id="tabBtnKeyword" onclick="switchTab('keyword')">キーワード検索</button>
+  <button class="tab-btn" id="tabBtnSimilar" onclick="switchTab('similar')">類似図面検索</button>
+</div>
+
+<!-- キーワード検索タブ -->
+<div class="tab-panel active" id="tabPanelKeyword">
+  <div class="search-bar">
+    <input type="text" id="keywordInput" placeholder="図番・図名・機械名・申請者などで検索（スペース区切りでAND検索、絞り込みのみでも可）" />
+    <button id="btnSearch" onclick="doSearch()">検索</button>
+  </div>
+
+  <!-- 検索対象トグル -->
+  <div class="target-toggle-row">
+    <label class="target-toggle">
+      <input type="checkbox" id="targetDrawings" checked onchange="onTargetToggleChange()"> 📄 図面を検索する
+    </label>
+    <label class="target-toggle">
+      <input type="checkbox" id="targetMainNumbers" checked onchange="onTargetToggleChange()"> 🔢 機械を検索する
+    </label>
+  </div>
+  <div class="empty-msg" id="noTargetMsg" style="display:none; padding:6px 0; color:#c0392b;">
+    図面・機械のいずれか一方は検索対象にしてください。
+  </div>
+
+  <!-- 絞り込みフィルタ -->
+  <div class="filter-panel">
+    <div class="filter-row">
+      <div class="filter-field">
+        <label>主図番</label>
+        <input type="text" id="filterMainNo" placeholder="部分一致（例：JB26）">
+      </div>
+      <div class="filter-field">
+        <label>申請者</label>
+        <input type="text" id="filterApplicant" list="nameCandidatesList" placeholder="候補から選択、または直接入力（部分一致）">
+      </div>
+    </div>
+    <div class="filter-row">
+      <div class="filter-field filter-field-wide">
+        <label>期間（図面：申請日／機械：着手日）</label>
+        <div class="filter-date-range">
+          <input type="date" id="filterDateFrom">
+          <span>〜</span>
+          <input type="date" id="filterDateTo">
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-divider" id="drawingOnlyDivider">図面台帳のみの項目</div>
+    <div class="filter-row filter-drawing-only" id="drawingOnlyFilters">
+      <div class="filter-field">
+        <label>図面サイズ</label>
+        <div class="filter-size-checks">
+          <label><input type="checkbox" class="filterSize" value="A0" checked> A0</label>
+          <label><input type="checkbox" class="filterSize" value="A1" checked> A1</label>
+          <label><input type="checkbox" class="filterSize" value="A2" checked> A2</label>
+          <label><input type="checkbox" class="filterSize" value="A3" checked> A3</label>
+          <label><input type="checkbox" class="filterSize" value="A4" checked> A4</label>
+        </div>
+      </div>
+      <div class="filter-field">
+        <label>材質</label>
+        <input type="text" id="filterMaterial" placeholder="部分一致（例：SUS304）">
+      </div>
+      <div class="filter-field">
+        <label>検図者</label>
+        <input type="text" id="filterReviewer" list="nameCandidatesList" placeholder="候補から選択、または直接入力（部分一致）">
+      </div>
+    </div>
+  </div>
+
+  <!-- 申請者・検図者フィルタ用の氏名候補（ユーザーマスタ＋図面索引から動的に取得） -->
+  <datalist id="nameCandidatesList"></datalist>
+
+  <div class="hint">図面台帳・機械台帳の両方を横断検索します。</div>
+
+  <div id="content">
+    <div class="empty-msg">キーワードまたは絞り込み条件を入力して検索してください。</div>
+  </div>
+</div>
+
+<!-- 類似図面検索タブ -->
+<div class="tab-panel" id="tabPanelSimilar">
+  <div class="upload-area" id="similarUploadArea"
+    ondragover="onSimilarDragOver(event)"
+    ondragleave="onSimilarDragLeave(event)"
+    ondrop="onSimilarDrop(event)">
+    <div class="upload-hint">PDFファイルをここへドラッグ&amp;ドロップ、またはファイルを選択</div>
+    <input type="file" id="similarFileInput" accept="application/pdf" onchange="onSimilarFileSelected()" />
+    <div class="upload-filename" id="similarFileName"></div>
+    <div>
+      <button class="btn-similar-search" id="btnSimilarSearch" onclick="doSimilarSearch()" disabled>この図面に似た図面を探す</button>
+    </div>
+  </div>
+  <div class="hint">
+    検索したい図面のPDFをアップロードすると、AIが形状・特徴を解析し、図面台帳に登録済みの図面と比較します
+    （※ 特徴属性データを持つ図面のみが比較対象です。本機能の導入前に登録された図面は対象外です）。
+  </div>
+
+  <div id="similarContent"></div>
+</div>
+
+<script>
+  let lastResults = { drawings: [], mainNumbers: [] };
+  let lastSimilarResult = null; // 詳細パネルの「戻る」ボタンから参照するため保持
+  let similarFileBase64 = null;
+
+  // アップロードエリア以外の場所にPDFがドロップされた際、ブラウザが
+  // ファイルを別タブで開いてしまう（＝ダイアログの内容が失われる）事故を
+  // 防ぐため、ダイアログ全体でドラッグ&ドロップの既定動作を無効化しておく
+  ['dragover', 'drop'].forEach(evt => {
+    document.addEventListener(evt, function(e) { e.preventDefault(); });
+  });
+
+  // ── タブ切り替え ──
+  function switchTab(tab) {
+    const isKeyword = tab === 'keyword';
+    document.getElementById('tabBtnKeyword').classList.toggle('active', isKeyword);
+    document.getElementById('tabBtnSimilar').classList.toggle('active', !isKeyword);
+    document.getElementById('tabPanelKeyword').classList.toggle('active', isKeyword);
+    document.getElementById('tabPanelSimilar').classList.toggle('active', !isKeyword);
+  }
+
+  document.getElementById('keywordInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') doSearch();
+  });
+
+  // ── 検索対象トグル（図面／機械）の変更時：図面台帳のみの項目をグレーアウト ──
+  function onTargetToggleChange() {
+    const drawingsOn   = document.getElementById('targetDrawings').checked;
+    const mainNumsOn   = document.getElementById('targetMainNumbers').checked;
+    const drawingOnlyEl = document.getElementById('drawingOnlyFilters');
+
+    // 図面を検索しない場合、図面台帳限定のフィルタ項目（サイズ・材質・検図者）は
+    // 意味を持たないため、入力を無効化してグレー表示にする
+    drawingOnlyEl.classList.toggle('disabled', !drawingsOn);
+    drawingOnlyEl.querySelectorAll('input').forEach(el => el.disabled = !drawingsOn);
+
+    // 両方OFFは検索不能な状態なので警告を出し、検索ボタンを止める
+    const noneSelected = !drawingsOn && !mainNumsOn;
+    document.getElementById('noTargetMsg').style.display = noneSelected ? 'block' : 'none';
+    document.getElementById('btnSearch').disabled = noneSelected;
+  }
+  // 初期状態を反映（両方ONなのでグレーアウトはなし）
+  onTargetToggleChange();
+
+  // ── 申請者・検図者フィルタ欄の氏名候補（datalist）を読み込む ──
+  // ユーザーマスタ＋図面索引から動的に取得するため、失敗しても致命的では
+  // ないので静かにログのみ出す（候補が空でも直接入力は引き続き可能）
+  google.script.run
+    .withSuccessHandler(function(names) {
+      const list = document.getElementById('nameCandidatesList');
+      list.innerHTML = names.map(n => `<option value="${escapeHtml(n)}">`).join('');
+    })
+    .withFailureHandler(function(err) {
+      console.warn('氏名候補の取得に失敗しました：', err.message);
+    })
+    .getNameCandidatesForSearchFilter();
+
+  function collectFilters_() {
+    const sizes = Array.from(document.querySelectorAll('.filterSize:checked')).map(el => el.value);
+    return {
+      mainNo:       document.getElementById('filterMainNo').value.trim(),
+      applicant:    document.getElementById('filterApplicant').value.trim(),
+      dateFrom:     document.getElementById('filterDateFrom').value,
+      dateTo:       document.getElementById('filterDateTo').value,
+      drawingSizes: sizes,
+      material:     document.getElementById('filterMaterial').value.trim(),
+      reviewer:     document.getElementById('filterReviewer').value.trim(),
+    };
+  }
+
+  function hasActiveFilters_(f) {
+    return !!(f.mainNo || f.applicant || f.dateFrom || f.dateTo ||
+              f.material || f.reviewer || f.drawingSizes.length > 0);
+  }
+
+  function doSearch() {
+    const keyword = document.getElementById('keywordInput').value.trim();
+    const searchDrawings   = document.getElementById('targetDrawings').checked;
+    const searchMainNumbers = document.getElementById('targetMainNumbers').checked;
+
+    if (!searchDrawings && !searchMainNumbers) return; // ボタン自体が無効化されているはずだが念のため
+
+    const filters = collectFilters_();
+    if (!keyword && !hasActiveFilters_(filters)) {
+      document.getElementById('content').innerHTML =
+        '<div class="empty-msg">キーワードまたは絞り込み条件を入力してください。</div>';
+      return;
+    }
+
+    document.getElementById('btnSearch').disabled = true;
+    document.getElementById('content').innerHTML =
+      '<div class="loading-msg"><div class="spinner"></div><br>検索中です…</div>';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        document.getElementById('btnSearch').disabled = false;
+        lastResults = result;
+        renderResults(result);
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('btnSearch').disabled = false;
+        document.getElementById('content').innerHTML =
+          `<div class="empty-msg">検索エラー：${err.message}</div>`;
+      })
+      .searchDrawingsAndMainNumbers({
+        keyword: keyword,
+        searchDrawings: searchDrawings,
+        searchMainNumbers: searchMainNumbers,
+        filters: filters,
+      });
+  }
+
+  // ── 類似図面検索：ファイル選択（<input type="file">経由） ──
+  function onSimilarFileSelected() {
+    const input = document.getElementById('similarFileInput');
+    handleSimilarFile(input.files[0]);
+  }
+
+  // ── 類似図面検索：ドラッグ&ドロップ ──
+  function onSimilarDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    document.getElementById('similarUploadArea').classList.add('drag-over');
+  }
+
+  function onSimilarDragLeave(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    document.getElementById('similarUploadArea').classList.remove('drag-over');
+  }
+
+  function onSimilarDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    document.getElementById('similarUploadArea').classList.remove('drag-over');
+
+    const files = e.dataTransfer && e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+    if (files.length > 1) {
+      document.getElementById('similarFileName').textContent = 'PDFファイルは1件だけドロップしてください。';
+      return;
+    }
+
+    // <input type="file"> 側の表示も同期させておく（見た目の一貫性のため。
+    // ブラウザによってはドロップしたファイルをinputへ直接反映できない
+    // 場合もあるため、あくまでベストエフォート）
+    try {
+      document.getElementById('similarFileInput').files = files;
+    } catch (err) {
+      // 反映できなくても内部状態（similarFileBase64）は正しく更新されるため実害はない
+    }
+
+    handleSimilarFile(files[0]);
+  }
+
+  // ── 類似図面検索：ファイル選択・ドロップの共通処理 ──
+  function handleSimilarFile(file) {
+    const btn = document.getElementById('btnSimilarSearch');
+    similarFileBase64 = null;
+
+    if (!file) {
+      document.getElementById('similarFileName').textContent = '';
+      btn.disabled = true;
+      return;
+    }
+    if (file.type !== 'application/pdf') {
+      document.getElementById('similarFileName').textContent = 'PDFファイルを選択してください。';
+      btn.disabled = true;
+      return;
+    }
+
+    document.getElementById('similarFileName').textContent = `選択中：${file.name}`;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      // data:application/pdf;base64,xxxx... の "xxxx..." 部分のみを取り出す
+      similarFileBase64 = e.target.result.split(',')[1];
+      btn.disabled = false;
+    };
+    reader.onerror = function() {
+      document.getElementById('similarFileName').textContent = 'ファイルの読み込みに失敗しました。';
+      btn.disabled = true;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ── 類似図面検索：実行 ──
+  function doSimilarSearch() {
+    if (!similarFileBase64) return;
+
+    document.getElementById('btnSimilarSearch').disabled = true;
+    document.getElementById('similarContent').innerHTML =
+      '<div class="loading-msg"><div class="spinner"></div><br>AIが図面を解析し、類似図面を探しています…</div>';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        document.getElementById('btnSimilarSearch').disabled = false;
+        lastSimilarResult = result;
+        renderSimilarResults(result);
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('btnSimilarSearch').disabled = false;
+        document.getElementById('similarContent').innerHTML =
+          `<div class="empty-msg">検索エラー：${err.message}</div>`;
+      })
+      .searchSimilarDrawings(similarFileBase64);
+  }
+
+  function renderSimilarResults(result) {
+    if (!result.success) {
+      document.getElementById('similarContent').innerHTML =
+        `<div class="empty-msg">${escapeHtml(result.message)}</div>`;
+      return;
+    }
+
+    const queryBox = `
+      <div class="query-summary-box">
+        <span class="k">検索対象の図面の特徴：</span>
+        ${escapeHtml(result.query.shapeCategory) || '―'}
+        ${result.query.material ? '／材質：' + escapeHtml(result.query.material) : ''}
+        ${result.query.summary ? '<br>' + escapeHtml(result.query.summary) : ''}
+      </div>`;
+
+    if (!result.results || result.results.length === 0) {
+      document.getElementById('similarContent').innerHTML = queryBox + `
+        <div class="empty-msg">
+          類似する図面が見つかりませんでした（特徴属性を持つ図面 ${result.totalCandidates || 0} 件中）。
+        </div>`;
+      return;
+    }
+
+    const cards = result.results.map(item => {
+      const pct = Math.min(100, Math.max(0, item.score));
+      const openLinkHtml = item.fileUrl
+        ? `<a class="result-open-link" href="${item.fileUrl}" target="_blank"
+             title="図面ファイルを開く" onclick="event.stopPropagation()">📄</a>`
+        : '';
+      return `
+        <div class="similar-card" onclick="showDrawingDetail('${escapeJs(item.fullNo)}', 'similarContent')">
+          <div class="similar-score">
+            <div class="pct">${pct}%</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${pct}%;"></div></div>
+          </div>
+          <div class="similar-main">
+            <div class="result-no">${item.fullNo}</div>
+            <div class="result-name">${escapeHtml(item.nameJp)}${item.modelName ? '　（' + escapeHtml(item.modelName) + '）' : ''}</div>
+            ${item.summary ? `<div class="similar-summary">${escapeHtml(item.summary)}</div>` : ''}
+          </div>
+          <div class="result-actions">
+            <span class="result-badge badge-status-${item.status}">${escapeHtml(item.status)}</span>
+            ${openLinkHtml}
+          </div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('similarContent').innerHTML = queryBox +
+      `<div class="section-title">類似図面 <span class="count">${result.results.length} 件</span></div>` +
+      cards;
+  }
+
+  function renderResults(result) {
+    const { drawings, mainNumbers } = result;
+
+    if (drawings.length === 0 && mainNumbers.length === 0) {
+      document.getElementById('content').innerHTML =
+        '<div class="empty-msg">該当する図面・主図番が見つかりませんでした。</div>';
+      return;
+    }
+
+    let html = '';
+
+    if (drawings.length > 0) {
+      html += `<div class="section-title">📄 図面 <span class="count">${drawings.length} 件</span></div>`;
+      html += drawings.map(item => {
+        const badgeCls = 'badge-status-' + item.status;
+        const openLinkHtml = item.fileUrl
+          ? `<a class="result-open-link" href="${item.fileUrl}" target="_blank"
+               title="${escapeHtml(item.fileLinkLabel)}" onclick="event.stopPropagation()">📄</a>`
+          : '';
+        return `
+          <div class="result-card" onclick="showDrawingDetail('${escapeJs(item.fullNo)}')">
+            <div class="result-main">
+              <div class="result-no">${item.fullNo}</div>
+              <div class="result-name">${escapeHtml(item.nameJp)}</div>
+              <div class="result-sub">${escapeHtml(item.modelName || '―')}　申請者：${escapeHtml(item.applicant)}${item.reviewer ? '　検図者：' + escapeHtml(item.reviewer) : ''}</div>
+            </div>
+            <div class="result-actions">
+              <span class="result-badge ${badgeCls}">${escapeHtml(item.status)}</span>
+              ${openLinkHtml}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    if (mainNumbers.length > 0) {
+      html += `<div class="section-title">🔢 主図番（機械） <span class="count">${mainNumbers.length} 件</span></div>`;
+      html += mainNumbers.map(item => {
+        const openLinkHtml = item.folderUrl
+          ? `<a class="result-open-link" href="${item.folderUrl}" target="_blank"
+               title="承認済み図面フォルダを開く" onclick="event.stopPropagation()">📁</a>`
+          : '';
+        return `
+          <div class="result-card" onclick="showMainNumberDetail('${escapeJs(item.mainNo)}')">
+            <div class="result-main">
+              <div class="result-no">${item.mainNo}</div>
+              <div class="result-name">${escapeHtml(item.modelNameJp)}${item.modelNameEn ? '（' + escapeHtml(item.modelNameEn) + '）' : ''}</div>
+              <div class="result-sub">着手日：${item.date || '―'}　申請者：${escapeHtml(item.applicant)}</div>
+            </div>
+            <div class="result-actions">
+              <span class="result-badge badge-main">主図番</span>
+              ${openLinkHtml}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    document.getElementById('content').innerHTML = html;
+  }
+
+  // ── 図面の詳細表示 ──
+  // targetId: 詳細を描画するコンテナのID。省略時はキーワード検索タブの'content'。
+  //   類似図面検索タブから呼ぶ場合は 'similarContent' を渡し、そのタブ内で
+  //   完結させる（別タブの見えないコンテナに描画されてしまう問題を防ぐため）。
+  function showDrawingDetail(fullNo, targetId) {
+    targetId = targetId || 'content';
+    document.getElementById(targetId).innerHTML =
+      '<div class="loading-msg"><div class="spinner"></div><br>読み込み中…</div>';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (!result.success) {
+          document.getElementById(targetId).innerHTML = `<div class="empty-msg">${result.message}</div>`;
+          return;
+        }
+        renderDrawingDetail(result.detail, targetId);
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById(targetId).innerHTML = `<div class="empty-msg">エラー：${err.message}</div>`;
+      })
+      .getDrawingDetail(fullNo);
+  }
+
+  function renderDrawingDetail(d, targetId) {
+    targetId = targetId || 'content';
+    // 「検索結果に戻る」ボタンの戻り先は、詳細をどちらのタブから開いたかで切り替える
+    // （キーワード検索タブ＝直前のキーワード検索結果、類似図面検索タブ＝直前の類似検索結果）
+    const backAction = targetId === 'similarContent'
+      ? 'renderSimilarResults(lastSimilarResult)'
+      : 'renderResults(lastResults)';
+
+    const fileLinkHtml = d.fileUrl
+      ? `<a href="${d.fileUrl}" target="_blank">📄 ${escapeHtml(d.fileLinkLabel)}</a>` : '（ファイル未登録）';
+
+    const historyRows = d.revisionHistory.map(r => `
+      <tr class="${r.isCurrent ? 'current-row' : ''}">
+        <td>${r.fullNo}${r.isCurrent ? '（表示中）' : ''}</td>
+        <td>${escapeHtml(r.revMark)}</td>
+        <td>${escapeHtml(r.status)}</td>
+        <td>${r.appDate || '―'}</td>
+        <td>${r.isLatest ? '⭐ 最新' : ''}</td>
+      </tr>`).join('');
+
+    document.getElementById(targetId).innerHTML = `
+      <button class="back-btn" onclick="${backAction}">← 検索結果に戻る</button>
+      <div class="detail-title">${d.fullNo}</div>
+      <div class="detail-subtitle">${escapeHtml(d.nameJp)}${d.nameEn ? '　/　' + escapeHtml(d.nameEn) : ''}</div>
+
+      <div class="info-grid">
+        <div class="k">主図番</div><div class="v">${d.mainNo}</div>
+        <div class="k">子図番/改訂</div><div class="v">${d.subNo} / ${escapeHtml(d.revMark)}</div>
+        <div class="k">ユニット名</div><div class="v">${escapeHtml(d.unitName) || '―'}</div>
+        <div class="k">機械名</div><div class="v">${escapeHtml(d.modelName) || '―'}</div>
+        <div class="k">材質</div><div class="v">${escapeHtml(d.material) || '―'}</div>
+        <div class="k">縮尺</div><div class="v">${escapeHtml(d.scale) || '―'}</div>
+        <div class="k">図面サイズ</div><div class="v">${escapeHtml(d.drawingSize) || '―'}</div>
+        <div class="k">ステータス</div><div class="v">${escapeHtml(d.status)}</div>
+      </div>
+
+      <div class="detail-section-title">承認状況</div>
+      <div class="info-grid">
+        <div class="k">申請者</div><div class="v">${escapeHtml(d.applicant)}（${d.appDate || '―'}）</div>
+        <div class="k">検図者</div><div class="v">${escapeHtml(d.reviewer) || '―'}（${d.reviewerDate || '未承認'}）</div>
+        <div class="k">課長</div><div class="v">${escapeHtml(d.manager) || '―'}（${d.managerDate || '未承認'}）</div>
+        <div class="k">部長</div><div class="v">${escapeHtml(d.director) || '―'}（${d.directorDate || '未承認'}）</div>
+      </div>
+
+      <div class="detail-section-title">改訂履歴（同一主図番・子図番）</div>
+      <table class="history-table">
+        <thead><tr><th>フル図番</th><th>改訂</th><th>ステータス</th><th>申請日</th><th></th></tr></thead>
+        <tbody>${historyRows}</tbody>
+      </table>
+
+      <div class="file-link-row">${fileLinkHtml}</div>
+    `;
+  }
+
+  // ── 主図番の詳細表示 ──
+  function showMainNumberDetail(mainNo) {
+    document.getElementById('content').innerHTML =
+      '<div class="loading-msg"><div class="spinner"></div><br>読み込み中…</div>';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (!result.success) {
+          document.getElementById('content').innerHTML = `<div class="empty-msg">${result.message}</div>`;
+          return;
+        }
+        renderMainNumberDetail(result.detail);
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('content').innerHTML = `<div class="empty-msg">エラー：${err.message}</div>`;
+      })
+      .getMainNumberDetail(mainNo);
+  }
+
+  function renderMainNumberDetail(d) {
+    lastMainNumberDetail = d; // 編集キャンセル時の再描画用に保持
+    const folderLinkHtml = d.folderUrl
+      ? `<a href="${d.folderUrl}" target="_blank">📁 承認済み図面フォルダを開く</a>` : '';
+
+    const linkedRows = d.linkedDrawings.map(item => `
+      <div class="result-card" onclick="showDrawingDetail('${escapeJs(item.fullNo)}')">
+        <div class="result-main">
+          <div class="result-no">${item.fullNo}</div>
+          <div class="result-name">${escapeHtml(item.nameJp)}</div>
+        </div>
+        <span class="result-badge badge-status-${item.status}">${escapeHtml(item.status)}</span>
+      </div>`).join('');
+
+    document.getElementById('content').innerHTML = `
+      <button class="back-btn" onclick="renderResults(lastResults)">← 検索結果に戻る</button>
+      <div class="detail-title">${d.mainNo}</div>
+      <div class="detail-subtitle">${escapeHtml(d.modelNameJp)}${d.modelNameEn ? '（' + escapeHtml(d.modelNameEn) + '）' : ''}</div>
+      ${d.description ? `<div class="hint" style="background:#EBF3FB;border:1px solid #cfe0f0;border-radius:6px;padding:8px 12px;margin-bottom:14px;color:#333;white-space:pre-wrap;">${escapeHtml(d.description)}</div>` : ''}
+
+      <div class="info-grid">
+        <div class="k">部署コード</div><div class="v">${escapeHtml(d.deptCode)}</div>
+        <div class="k">申請者</div><div class="v">${escapeHtml(d.applicant)}</div>
+        <div class="k">着手日</div><div class="v">${d.date || '―'}</div>
+        <div class="k">備考</div><div class="v">${escapeHtml(d.note) || '―'}</div>
+        <div class="k">エクスプローラーパス</div><div class="v" style="grid-column: span 3;">${escapeHtml(d.explorerPath) || '―'}</div>
+      </div>
+      <div class="file-link-row">${folderLinkHtml}</div>
+
+      <div class="detail-section-title">CADデータフォルダ</div>
+      <div id="cadFolderView">${renderCadFolderView_(d)}</div>
+
+      <div class="detail-section-title">部品リスト（BOM）</div>
+      <div id="bomView">${renderBomView_(d)}</div>
+
+      <div class="detail-section-title">紐づく図面（${d.linkedDrawings.length} 件）</div>
+      ${linkedRows || '<div class="empty-msg">まだ図面が登録されていません。</div>'}
+    `;
+  }
+
+  // ── 部品リストの表示用HTML（通常表示） ──
+  function renderBomView_(d) {
+    const bomLinkHtml = d.bomUrl
+      ? `<a href="${d.bomUrl}" target="_blank">📊 部品リストを開く</a>` : '（未設定）';
+    return `
+      <div class="info-grid">
+        <div class="k">リンク</div><div class="v" style="grid-column: span 3;">${bomLinkHtml}</div>
+      </div>
+      <button class="back-btn" onclick="editBom()">✏️ 部品リストのリンクを編集</button>
+    `;
+  }
+
+  // ── 部品リストの編集フォームへ切り替え ──
+  function editBom() {
+    const d = lastMainNumberDetail;
+    document.getElementById('bomView').innerHTML = `
+      <div class="form-group">
+        <label>新しい部品リストのリンク</label>
+        <input type="text" id="bomUrlInput" value="${escapeHtml(d.bomUrl || '')}"
+          placeholder="例：https://docs.google.com/spreadsheets/d/xxxxxxxx" />
+        <div class="hint">部品リストのGoogleスプレッドシートを開いた状態のアドレスバーのURLを貼り付けてください。</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="search-bar-save-btn" id="btnSaveBom" onclick="saveBom('${escapeJs(d.mainNo)}')">保存</button>
+        <button class="back-btn" onclick="renderMainNumberDetail(lastMainNumberDetail)">キャンセル</button>
+      </div>
+      <div class="empty-msg" id="bomMsg" style="display:none;padding:8px 0;"></div>
+    `;
+    setTimeout(() => document.getElementById('bomUrlInput').focus(), 100);
+  }
+
+  // ── 部品リストのリンクを保存 ──
+  function saveBom(mainNo) {
+    const url = document.getElementById('bomUrlInput').value.trim();
+    const msg = document.getElementById('bomMsg');
+    const btn = document.getElementById('btnSaveBom');
+    if (!url) {
+      msg.style.display = 'block';
+      msg.textContent = 'URLを入力してください。';
+      return;
+    }
+    btn.disabled = true;
+    msg.style.display = 'block';
+    msg.textContent = '保存中です…';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false;
+        if (!result.success) {
+          msg.textContent = result.message;
+          return;
+        }
+        lastMainNumberDetail.bomUrl = result.bomUrl;
+        document.getElementById('bomView').innerHTML = renderBomView_(lastMainNumberDetail);
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        msg.textContent = `エラー：${err.message}`;
+      })
+      .updateBomLink(mainNo, url);
+  }
+
+  // 保持しておく直近の主図番詳細（編集キャンセル時の再描画に使用）
+  let lastMainNumberDetail = null;
+
+  // ── CADフォルダの表示用HTML（通常表示） ──
+  function renderCadFolderView_(d) {
+    const cadLinkHtml = d.cadFolderUrl
+      ? `<a href="${d.cadFolderUrl}" target="_blank">📁 CADフォルダを開く</a>` : '（未設定）';
+    return `
+      <div class="info-grid">
+        <div class="k">リンク</div><div class="v" style="grid-column: span 3;">${cadLinkHtml}</div>
+        <div class="k">エクスプローラーパス</div><div class="v" style="grid-column: span 3;">${escapeHtml(d.cadFolderPath) || '―'}</div>
+      </div>
+      <button class="back-btn" onclick="editCadFolder()">✏️ CADフォルダのリンクを編集</button>
+    `;
+  }
+
+  // ── CADフォルダの編集フォームへ切り替え ──
+  function editCadFolder() {
+    const d = lastMainNumberDetail;
+    document.getElementById('cadFolderView').innerHTML = `
+      <div class="form-group">
+        <label>新しいCADフォルダのリンク</label>
+        <input type="text" id="cadFolderUrlInput" value="${escapeHtml(d.cadFolderUrl || '')}"
+          placeholder="例：https://drive.google.com/drive/folders/xxxxxxxx" />
+        <div class="hint">
+          エクスプローラーで対象フォルダを右クリック→「Google Drive」→
+          「リンクをクリップボードにコピー」で取得したリンクを貼り付けてください。
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="search-bar-save-btn" id="btnSaveCadFolder" onclick="saveCadFolder('${escapeJs(d.mainNo)}')">保存</button>
+        <button class="back-btn" onclick="renderMainNumberDetail(lastMainNumberDetail)">キャンセル</button>
+      </div>
+      <div class="empty-msg" id="cadFolderMsg" style="display:none;padding:8px 0;"></div>
+    `;
+    setTimeout(() => document.getElementById('cadFolderUrlInput').focus(), 100);
+  }
+
+  // ── CADフォルダのリンクを保存 ──
+  function saveCadFolder(mainNo) {
+    const url = document.getElementById('cadFolderUrlInput').value.trim();
+    const msg = document.getElementById('cadFolderMsg');
+    const btn = document.getElementById('btnSaveCadFolder');
+    if (!url) {
+      msg.style.display = 'block';
+      msg.textContent = 'URLを入力してください。';
+      return;
+    }
+    btn.disabled = true;
+    msg.style.display = 'block';
+    msg.textContent = '保存中です…';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false;
+        if (!result.success) {
+          msg.textContent = result.message;
+          return;
+        }
+        lastMainNumberDetail.cadFolderUrl  = result.cadFolderUrl;
+        lastMainNumberDetail.cadFolderPath = result.cadFolderPath;
+        document.getElementById('cadFolderView').innerHTML = renderCadFolderView_(lastMainNumberDetail);
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        msg.textContent = `エラー：${err.message}`;
+      })
+      .updateCadFolderLink(mainNo, url);
+  }
+
+  // ── XSS対策の簡易エスケープ ──
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function escapeJs(str) {
+    return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  }
+</script>
+</body>
+</html>

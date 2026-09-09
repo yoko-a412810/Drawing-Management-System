@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Yu Gothic', 'Meiryo', sans-serif;
+      font-size: 13px;
+      background: #f8f9fa;
+      color: #333;
+      padding: 20px;
+    }
+
+    .info-box {
+      background: #EBF3FB;
+      border: 1px solid #2E5C8A;
+      border-radius: 6px;
+      padding: 8px 14px;
+      margin-bottom: 14px;
+      font-size: 12px;
+      color: #1F4E79;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: bold;
+      color: #444;
+      margin-bottom: 6px;
+    }
+
+    .path-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 9px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: 'Courier New', monospace;
+      background: #fff;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #2E5C8A;
+      box-shadow: 0 0 0 2px rgba(46,92,138,0.12);
+    }
+
+    button {
+      padding: 9px 18px;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+
+    #btnCopy {
+      background: #2E5C8A;
+      color: #fff;
+    }
+    #btnCopy:hover { background: #1F4E79; }
+    #btnCopy.copied { background: #2e7d32; }
+
+    .msg {
+      margin-top: 12px;
+      font-size: 12px;
+      color: #666;
+      min-height: 16px;
+    }
+
+    .btn-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+
+    #btnClose {
+      background: #e0e0e0;
+      color: #333;
+      padding: 7px 16px;
+    }
+    #btnClose:hover { background: #ccc; }
+  </style>
+</head>
+<body>
+
+<div class="info-box">
+  主図番：<strong><?!= mainNo ?></strong>
+</div>
+
+<label>エクスプローラーパス</label>
+<div class="path-row">
+  <input type="text" id="pathInput" value="<?!= path ?>" readonly onclick="this.select()">
+  <button id="btnCopy" onclick="copyPath()">コピー</button>
+</div>
+
+<div class="msg" id="msg"></div>
+
+<div class="btn-row">
+  <button id="btnClose" onclick="google.script.host.close()">閉じる</button>
+</div>
+
+<script>
+  const pathText = document.getElementById('pathInput').value;
+
+  /**
+   * クリップボードへのコピーを試み、実際に成功したかどうかを boolean で返す。
+   * document.execCommand('copy') は失敗しても例外を投げず false 以外を返す
+   * ことがあるため、戻り値を厳密にチェックする。
+   */
+  async function tryCopyToClipboard() {
+    // ① まず Clipboard API を試す（成功すればこれが最も確実）
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(pathText);
+        return true;
+      } catch (e) {
+        // 権限がない等で失敗した場合は次の方法へフォールバック
+      }
+    }
+
+    // ② 古い execCommand 方式（戻り値を必ず確認する）
+    const input = document.getElementById('pathInput');
+    input.focus();
+    input.select();
+    let succeeded = false;
+    try {
+      succeeded = document.execCommand('copy');
+    } catch (e2) {
+      succeeded = false;
+    }
+    return succeeded;
+  }
+
+  // ボタンクリック時（ユーザー操作を伴うので、通常はこちらが確実に成功する）
+  async function copyPath() {
+    const ok = await tryCopyToClipboard();
+    if (ok) {
+      onCopySuccess();
+    } else {
+      onCopyFailure('コピーに失敗しました。もう一度「コピー」ボタンを押すか、テキストボックスの内容を手動で選択してコピーしてください。');
+    }
+  }
+
+  function onCopySuccess() {
+    const btn = document.getElementById('btnCopy');
+    btn.textContent = '✓ コピー済み';
+    btn.classList.add('copied');
+    document.getElementById('msg').textContent = 'クリップボードにコピーしました。エクスプローラーに貼り付けて開けます。';
+  }
+
+  function onCopyFailure(message) {
+    document.getElementById('msg').textContent = message;
+  }
+
+  // ダイアログが開いたら自動でコピーを試みる。
+  // ページ読み込み直後はブラウザがユーザー操作とみなさず失敗することがあるため、
+  // 失敗時は「成功したふりをする」表示を出さず、ボタンを押すよう案内するに留める。
+  window.onload = async function() {
+    const ok = await tryCopyToClipboard();
+    if (ok) {
+      onCopySuccess();
+    } else {
+      onCopyFailure('「コピー」ボタンを押してクリップボードにコピーしてください。');
+    }
+  };
+</script>
+</body>
+</html>

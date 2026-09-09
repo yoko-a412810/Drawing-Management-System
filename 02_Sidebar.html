@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Yu Gothic', 'Meiryo', sans-serif;
+      font-size: 13px;
+      background: #f8f9fa;
+      color: #333;
+      padding: 16px 14px;
+    }
+
+    h1 {
+      font-size: 15px;
+      color: #1F4E79;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 11px;
+      color: #888;
+      margin-bottom: 18px;
+    }
+
+    .section {
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: bold;
+      color: #2E5C8A;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #dbe6f0;
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      background: #fff;
+      border: 1px solid #d8dce0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      text-align: left;
+      font-family: inherit;
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .action-btn:hover:not(:disabled) {
+      background: #EBF3FB;
+      border-color: #2E5C8A;
+      box-shadow: 0 1px 4px rgba(46,92,138,0.12);
+    }
+
+    .action-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .action-btn .icon {
+      font-size: 20px;
+      flex-shrink: 0;
+      width: 26px;
+      text-align: center;
+    }
+
+    .action-btn .label-group {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .action-btn .label {
+      font-size: 13px;
+      font-weight: bold;
+      color: #222;
+    }
+
+    .action-btn .desc {
+      font-size: 11px;
+      color: #888;
+      margin-top: 2px;
+      line-height: 1.3;
+    }
+
+    .action-btn .spinner {
+      display: none;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #ccc;
+      border-top-color: #2E5C8A;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    .action-btn.loading .spinner { display: block; }
+    .action-btn.loading .icon { display: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .badge-todo {
+      display: inline-block;
+      background: #eee;
+      color: #999;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 8px;
+      margin-left: 6px;
+      font-weight: normal;
+    }
+
+    .footer-note {
+      font-size: 10px;
+      color: #aaa;
+      margin-top: 24px;
+      line-height: 1.5;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<h1>図面承認・採番・出図管理システム</h1>
+
+<div class="section">
+  <div class="section-title">主図番採番（旧設備図面台帳）</div>
+  <button class="action-btn" onclick="run(this, 'openMainNumberDialog')">
+    <span class="icon">🔢</span>
+    <span class="spinner"></span>
+    <span class="label-group">
+      <div class="label">主図番の発行</div>
+      <div class="desc">機械名を記入し、新規の主図番を採番</div>
+    </span>
+  </button>
+</div>
+
+<div class="section">
+  <div class="section-title">図面の承認申請（旧検図・承認台帳）</div>
+  <button class="action-btn" onclick="run(this, 'runOcrAndFillInputSheet')">
+    <span class="icon">✨</span>
+    <span class="spinner"></span>
+    <span class="label-group">
+      <div class="label">図面一括読取（AI-OCR）</div>
+      <div class="desc">PDF図面を読み取り、シートへ転記</div>
+    </span>
+  </button>
+  <button class="action-btn" onclick="run(this, 'RegisterDrawings')">
+    <span class="icon">📝</span>
+    <span class="spinner"></span>
+    <span class="label-group">
+      <div class="label">図面一括申請</div>
+      <div class="desc">図面登録のため、承認依頼を送信</div>
+    </span>
+  </button>
+</div>
+
+<div class="section">
+  <div class="section-title">図面を探す</div>
+  <button class="action-btn" onclick="run(this, 'openDrawingSearchDialog')">
+    <span class="icon">🔍</span>
+    <span class="spinner"></span>
+    <span class="label-group">
+      <div class="label">図面検索</div>
+      <div class="desc">図面や機械を検索する</div>
+    </span>
+  </button>
+</div>
+
+<div class="section">
+  <div class="section-title">図面の出図（旧コピー管理台帳）</div>
+  <button class="action-btn" onclick="run(this, 'openReleaseDialog')">
+    <span class="icon">📤</span>
+    <span class="spinner"></span>
+    <span class="label-group">
+      <div class="label">出図を登録する<span class="badge-todo">準備中</span></div>
+      <div class="desc">出図印を押して図面を出力</div>
+    </span>
+  </button>
+</div>
+
+<div class="section">
+  <div class="section-title">ユーティリティ</div>
+  <button class="action-btn" onclick="run(this, 'openCopyPathDialog')">
+    <span class="icon">📋</span>
+    <span class="spinner"></span>
+    <span class="label-group">
+      <div class="label">フォルダパスをコピー</div>
+      <div class="desc">パスをクリップボードにコピー</div>
+    </span>
+  </button>
+</div>
+
+<? if (legacyImportAvailable) { ?>
+<div class="section">
+  <div class="section-title">過去図面の一括インポート（移行期間限定）</div>
+  <button class="action-btn" onclick="run(this, 'runLegacyOcrAndFillInputSheet')">
+    <span class="icon">🗄️</span>
+    <span class="spinner"></span>
+    <span class="label-group">
+      <div class="label">① 過去図面一括読取（OCR）</div>
+      <div class="desc">過去図面PDFをAI-OCRで読み取り</div>
+    </span>
+  </button>
+  <button class="action-btn" onclick="run(this, 'RegisterLegacyDrawings')">
+    <span class="icon">📥</span>
+    <span class="spinner"></span>
+    <span class="label-group">
+      <div class="label">② 過去図面一括登録</div>
+      <div class="desc">過去図面を台帳へ登録</div>
+    </span>
+  </button>
+</div>
+<? } ?>
+
+<div class="footer-note">
+  再度このパネルを開くには<br>メニュー「📐 図面管理」→「サイドバーを開く」
+</div>
+
+<script>
+  function run(btn, funcName) {
+    if (btn.classList.contains('loading')) return;
+
+    const allButtons = document.querySelectorAll('.action-btn');
+    allButtons.forEach(b => b.disabled = true);
+    btn.classList.add('loading');
+
+    google.script.run
+      .withSuccessHandler(() => {
+        allButtons.forEach(b => b.disabled = false);
+        btn.classList.remove('loading');
+      })
+      .withFailureHandler((err) => {
+        allButtons.forEach(b => b.disabled = false);
+        btn.classList.remove('loading');
+        alert('エラーが発生しました：' + err.message);
+      })
+      [funcName]();
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>図面承認待ち一覧</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Yu Gothic', 'Meiryo', sans-serif;
+      font-size: 14px;
+      background: #f0f2f5;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    /* ヘッダー */
+    .header {
+      background: #1F4E79;
+      color: #fff;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .header h1 { font-size: 17px; font-weight: bold; }
+    .header .user { font-size: 13px; opacity: 0.85; }
+
+    /* メインコンテンツ */
+    .container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+
+    /* ローディング */
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: #888;
+      font-size: 15px;
+    }
+    .spinner {
+      display: inline-block;
+      width: 32px; height: 32px;
+      border: 3px solid #ddd;
+      border-top-color: #2E5C8A;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 空状態 */
+    .empty {
+      text-align: center;
+      padding: 60px;
+      background: #fff;
+      border-radius: 10px;
+      color: #888;
+    }
+    .empty .icon { font-size: 48px; margin-bottom: 12px; }
+    .empty p { font-size: 15px; }
+
+    /* テーブル */
+    .description-box {
+      background: #EBF3FB;
+      border: 1px solid #cfe0f0;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+    .description-label {
+      font-size: 11px;
+      font-weight: bold;
+      color: #2E5C8A;
+      margin-bottom: 4px;
+    }
+    .description-text {
+      font-size: 13px;
+      color: #333;
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+
+    .table-wrap {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+    .table-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .table-header h2 { font-size: 15px; color: #1F4E79; }
+    .count-badge {
+      background: #2E5C8A;
+      color: #fff;
+      font-size: 12px;
+      font-weight: bold;
+      padding: 3px 10px;
+      border-radius: 12px;
+    }
+
+    /* 一括操作バー */
+    .bulk-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      background: #EBF3FB;
+      border-bottom: 1px solid #cfe0f0;
+      padding: 10px 20px;
+    }
+    .bulk-bar.active { display: flex; }
+    .bulk-bar .bulk-count {
+      font-size: 13px;
+      font-weight: bold;
+      color: #1F4E79;
+    }
+    .bulk-bar .bulk-actions { display: flex; gap: 8px; }
+    .btn-bulk-approve {
+      background: #2E5C8A;
+      color: #fff;
+      padding: 7px 16px;
+      border: none;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: bold;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .btn-bulk-approve:hover:not(:disabled) { background: #1F4E79; }
+    .btn-bulk-reject {
+      background: #fff;
+      color: #c0392b;
+      border: 1.5px solid #c0392b;
+      padding: 7px 16px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: bold;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .btn-bulk-reject:hover:not(:disabled) { background: #fdf0f0; }
+    .bulk-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .chk-col { width: 34px; text-align: center; }
+    .chk-col input { width: 16px; height: 16px; cursor: pointer; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    thead th {
+      background: #f5f7fa;
+      padding: 11px 14px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: bold;
+      color: #555;
+      border-bottom: 1px solid #e0e0e0;
+      white-space: nowrap;
+    }
+    tbody tr {
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.15s;
+    }
+    tbody tr:hover { background: #f8faff; }
+    tbody td {
+      padding: 13px 14px;
+      font-size: 13px;
+      vertical-align: middle;
+    }
+    .full-no {
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      color: #1F4E79;
+      font-size: 13px;
+    }
+    .name-jp { font-weight: bold; }
+
+    /* ステータスバッジ */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    .badge-review   { background: #FFF3CD; color: #856404; }
+    .badge-manager  { background: #D1ECF1; color: #0C5460; }
+    .badge-director { background: #D4EDDA; color: #155724; }
+
+    /* 差戻しバッジ */
+    .return-badge {
+      display: inline-block;
+      background: #f8d7da;
+      color: #721c24;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 10px;
+      margin-left: 6px;
+    }
+
+    /* AIチェック（検図者への参考情報）バッジ・詳細展開行 */
+    .ai-badge {
+      display: inline-block;
+      background: #e3f2fd;
+      color: #0d47a1;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 3px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      border: none;
+      font-family: inherit;
+    }
+    .ai-badge:hover { background: #cfe4fb; }
+    .ai-badge-none {
+      color: #ccc;
+      font-size: 12px;
+    }
+    .ai-detail-row { display: none; background: #f5f9ff; }
+    .ai-detail-row.expanded { display: table-row; }
+    .ai-detail-box { padding: 10px 6px; }
+    .ai-detail-label {
+      font-size: 11px;
+      font-weight: bold;
+      color: #0d47a1;
+      margin-bottom: 6px;
+    }
+    .ai-detail-list {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: #333;
+    }
+
+    /* ボタン */
+    .btn-group { display: flex; gap: 8px; }
+    .btn {
+      padding: 6px 14px;
+      border: none;
+      border-radius: 5px;
+      font-size: 12px;
+      font-family: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-approve { background: #2E5C8A; color: #fff; }
+    .btn-approve:hover:not(:disabled) { background: #1F4E79; }
+    .btn-reject  { background: #fff; color: #c0392b; border: 1.5px solid #c0392b; }
+    .btn-reject:hover:not(:disabled)  { background: #fdf0f0; }
+
+    /* ファイルリンク */
+    .file-link {
+      color: #2E5C8A;
+      text-decoration: none;
+      font-size: 12px;
+    }
+    .file-link:hover { text-decoration: underline; }
+
+    /* 差戻しモーダル */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 10px;
+      padding: 28px;
+      width: 440px;
+      max-width: 95vw;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    }
+    .modal h3 { font-size: 15px; color: #c0392b; margin-bottom: 6px; }
+    .modal .target-no { font-size: 13px; color: #666; margin-bottom: 16px; }
+    .modal textarea {
+      width: 100%;
+      height: 90px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 13px;
+      font-family: inherit;
+      resize: vertical;
+    }
+    .modal textarea:focus {
+      outline: none;
+      border-color: #c0392b;
+      box-shadow: 0 0 0 2px rgba(192,57,43,0.12);
+    }
+    .modal .btn-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .btn-cancel { background: #e0e0e0; color: #333; }
+    .btn-cancel:hover { background: #ccc; }
+    .btn-do-reject { background: #c0392b; color: #fff; }
+    .btn-do-reject:hover:not(:disabled) { background: #a93226; }
+
+    /* トースト通知 */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #323232;
+      color: #fff;
+      padding: 12px 22px;
+      border-radius: 6px;
+      font-size: 13px;
+      opacity: 0;
+      transition: opacity 0.3s, transform 0.3s;
+      z-index: 2000;
+      max-width: 90vw;
+      text-align: center;
+      pointer-events: none;
+    }
+    .toast.success { background: #2e7d32; }
+    .toast.error   { background: #c62828; }
+    .toast.show    { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* エラー表示 */
+    .error-box {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+    }
+
+    .refresh-btn {
+      background: none;
+      border: 1px solid #2E5C8A;
+      color: #2E5C8A;
+      padding: 5px 12px;
+      border-radius: 5px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .refresh-btn:hover { background: #EBF3FB; }
+  </style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+<div class="header">
+  <h1>📋 図面承認待ち一覧</h1>
+  <div class="user" id="userName">読み込み中...</div>
+</div>
+
+<!-- メインコンテンツ -->
+<div class="container">
+  <div id="content">
+    <div class="loading">
+      <div class="spinner"></div><br>承認待ち一覧を読み込んでいます...
+    </div>
+  </div>
+</div>
+
+<!-- 差戻しモーダル -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal">
+    <h3 id="rejectModalTitle">⚠️ 差戻し</h3>
+    <div class="target-no" id="rejectTargetNo"></div>
+    <label style="font-size:12px;font-weight:bold;color:#444;display:block;margin-bottom:6px;">
+      差戻し理由 <span style="color:#c0392b">*</span>
+    </label>
+    <textarea id="rejectReason" placeholder="差戻し理由を入力してください"></textarea>
+    <div class="btn-row">
+      <button class="btn btn-cancel" onclick="closeRejectModal()">キャンセル</button>
+      <button class="btn btn-do-reject" id="btnDoReject" onclick="submitReject()">差戻しする</button>
+    </div>
+  </div>
+</div>
+
+<!-- トースト -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // URLの ?batchId=... があれば、その申請バッチの図面のみに絞り込む
+  const BATCH_ID = <?!= JSON.stringify(batchId) ?>;
+
+  // 差戻し対象（単体承認時は要素1つ、一括差戻し時は複数）
+  let rejectTargets = []; // [{ fullNo, nameJp }]
+  // チェックボックスで選択中のフル図番
+  let selectedFullNos = new Set();
+  // 直近の描画結果（全選択・選択状態の参照用）
+  let lastItems = [];
+
+  // ステータスのラベルとスタイル
+  const STATUS_MAP = {
+    '検図中':       { label: '検図者承認待ち', cls: 'badge-review'   },
+    '課長承認待ち': { label: '課長承認待ち',   cls: 'badge-manager'  },
+    '部長承認待ち': { label: '部長承認待ち',   cls: 'badge-director' },
+  };
+
+  // 初期ロード
+  window.onload = function() { loadApprovals(); };
+
+  function loadApprovals() {
+    document.getElementById('content').innerHTML =
+      '<div class="loading"><div class="spinner"></div><br>承認待ち一覧を読み込んでいます...</div>';
+
+    google.script.run
+      .withSuccessHandler(renderApprovals)
+      .withFailureHandler(function(err) {
+        document.getElementById('content').innerHTML =
+          `<div class="error-box">データの読み込みに失敗しました：${err.message}</div>`;
+      })
+      .getMyPendingApprovals(BATCH_ID);
+  }
+
+  function renderApprovals(result) {
+    document.getElementById('userName').textContent = result.userName
+      ? `ログイン中：${result.userName}`
+      : 'ユーザー情報なし';
+
+    if (result.error) {
+      document.getElementById('content').innerHTML =
+        `<div class="error-box">${result.error}</div>`;
+      return;
+    }
+
+    if (!result.items || result.items.length === 0) {
+      lastItems = [];
+      selectedFullNos.clear();
+      document.getElementById('content').innerHTML = `
+        <div class="empty">
+          <div class="icon">✅</div>
+          <p>現在、承認待ちの図面はありません。</p>
+        </div>`;
+      return;
+    }
+
+    lastItems = result.items;
+    selectedFullNos.clear(); // 更新のたびに選択状態はリセット
+
+    const rows = result.items.map(item => {
+      const st       = STATUS_MAP[item.status] || { label: item.status, cls: '' };
+      const fileLink = item.fileUrl
+        ? `<a href="${item.fileUrl}" target="_blank" class="file-link">📄 図面を開く</a>` : '―';
+      const rowId    = item.fullNo.replace(/[^a-zA-Z0-9]/g,'_');
+
+      // AIチェック（検図者への参考情報。正式な検図結果ではない）
+      const aiPoints = item.aiCheckPoints || [];
+      const aiBadge  = aiPoints.length > 0
+        ? `<button type="button" class="ai-badge" onclick="toggleAiDetail('${rowId}')">⚠️ ${aiPoints.length}件</button>`
+        : `<span class="ai-badge-none">―</span>`;
+      const aiDetailRow = aiPoints.length > 0 ? `
+        <tr class="ai-detail-row" id="ai-detail-${rowId}">
+          <td></td>
+          <td colspan="9">
+            <div class="ai-detail-box">
+              <div class="ai-detail-label">⚠️ AIチェックによる確認事項（申請者への参考情報として共有されたものです。正式な検図結果ではありません）</div>
+              <ul class="ai-detail-list">
+                ${aiPoints.map(p => `<li>${escapeHtml(p)}</li>`).join('')}
+              </ul>
+            </div>
+          </td>
+        </tr>` : '';
+
+      return `
+        <tr id="row-${rowId}">
+          <td class="chk-col">
+            <input type="checkbox" class="row-check" data-fullno="${item.fullNo}"
+              data-namejp="${item.nameJp}" onchange="onRowCheckChange(this)">
+          </td>
+          <td>${item.modelName || '―'}</td>
+          <td><span class="full-no">${item.fullNo}</span></td>
+          <td><span class="name-jp">${item.nameJp}</span></td>
+          <td>${aiBadge}</td>
+          <td><span class="badge ${st.cls}">${st.label}</span></td>
+          <td>${item.appDate}</td>
+          <td>${item.applicant}</td>
+          <td>${fileLink}</td>
+          <td>
+            <div class="btn-group">
+              <button class="btn btn-approve"
+                onclick="approve('${item.fullNo}')">承認</button>
+              <button class="btn btn-reject"
+                onclick="openRejectModal('${item.fullNo}', '${item.nameJp}')">差戻し</button>
+            </div>
+          </td>
+        </tr>${aiDetailRow}`;
+    }).join('');
+
+    document.getElementById('content').innerHTML = `
+      ${result.description ? `
+      <div class="description-box">
+        <div class="description-label">説明文</div>
+        <div class="description-text">${escapeHtml(result.description)}</div>
+      </div>` : ''}
+      <div class="table-wrap">
+        <div class="table-header">
+          <h2>承認待ち図面${BATCH_ID ? '（今回の申請分のみ表示中）' : ''}</h2>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="count-badge" id="totalCountBadge">${result.items.length} 件</span>
+            <button class="refresh-btn" onclick="loadApprovals()">🔄 更新</button>
+          </div>
+        </div>
+        <div class="bulk-bar" id="bulkBar">
+          <span class="bulk-count" id="bulkCount">0 件選択中</span>
+          <div class="bulk-actions">
+            <button class="btn-bulk-approve" id="btnBulkApprove" onclick="bulkApprove()">選択した図面を一括承認</button>
+            <button class="btn-bulk-reject" id="btnBulkReject" onclick="openBulkRejectModal()">選択した図面を一括差戻し</button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th class="chk-col">
+                <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this.checked)">
+              </th>
+              <th>機械名</th>
+              <th>図面番号</th>
+              <th>図名</th>
+              <th>AI所見</th>
+              <th>現在の承認段階</th>
+              <th>申請日</th>
+              <th>申請者</th>
+              <th>図面ファイル</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+
+    updateBulkBar();
+  }
+
+  // ── チェックボックス選択の管理 ──
+  function onRowCheckChange(checkbox) {
+    const fullNo = checkbox.dataset.fullno;
+    if (checkbox.checked) {
+      selectedFullNos.add(fullNo);
+    } else {
+      selectedFullNos.delete(fullNo);
+      document.getElementById('selectAllCheckbox').checked = false;
+    }
+    updateBulkBar();
+  }
+
+  function toggleSelectAll(checked) {
+    document.querySelectorAll('.row-check').forEach(cb => {
+      cb.checked = checked;
+      if (checked) selectedFullNos.add(cb.dataset.fullno);
+      else selectedFullNos.delete(cb.dataset.fullno);
+    });
+    updateBulkBar();
+  }
+
+  function updateBulkBar() {
+    const bar   = document.getElementById('bulkBar');
+    const count = document.getElementById('bulkCount');
+    if (!bar) return;
+    const n = selectedFullNos.size;
+    count.textContent = `${n} 件選択中`;
+    bar.classList.toggle('active', n > 0);
+  }
+
+  function setBulkButtonsDisabled(disabled) {
+    const a = document.getElementById('btnBulkApprove');
+    const r = document.getElementById('btnBulkReject');
+    if (a) a.disabled = disabled;
+    if (r) r.disabled = disabled;
+  }
+
+  // ── 一括承認 ──
+  function bulkApprove() {
+    const fullNoList = Array.from(selectedFullNos);
+    if (fullNoList.length === 0) return;
+    if (!confirm(`選択した ${fullNoList.length} 件をまとめて承認しますか？`)) return;
+
+    setBulkButtonsDisabled(true);
+    fullNoList.forEach(fullNo => setRowLoading(fullNo, true));
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        setBulkButtonsDisabled(false);
+        showToast(result.message, result.success ? 'success' : 'error');
+        setTimeout(loadApprovals, 1200);
+      })
+      .withFailureHandler(function(err) {
+        setBulkButtonsDisabled(false);
+        fullNoList.forEach(fullNo => setRowLoading(fullNo, false));
+        showToast(`エラー：${err.message}`, 'error');
+      })
+      .approveDrawingsBulk(fullNoList);
+  }
+
+  // ── 一括差戻し ──
+  function openBulkRejectModal() {
+    const targets = lastItems.filter(item => selectedFullNos.has(item.fullNo));
+    if (targets.length === 0) return;
+    rejectTargets = targets.map(item => ({ fullNo: item.fullNo, nameJp: item.nameJp }));
+    document.getElementById('rejectModalTitle').textContent = '⚠️ 一括差戻し';
+    document.getElementById('rejectTargetNo').textContent =
+      `${rejectTargets.length} 件を一括差戻しします`;
+    document.getElementById('rejectReason').value = '';
+    document.getElementById('rejectModal').classList.add('active');
+    setTimeout(() => document.getElementById('rejectReason').focus(), 100);
+  }
+
+  // 承認処理
+  function approve(fullNo) {
+    if (!confirm(`「${fullNo}」を承認しますか？`)) return;
+    setRowLoading(fullNo, true);
+    google.script.run
+      .withSuccessHandler(function(result) {
+        setRowLoading(fullNo, false);
+        if (result.success) {
+          showToast(result.message, 'success');
+          setTimeout(loadApprovals, 1500);
+        } else {
+          showToast(result.message, 'error');
+        }
+      })
+      .withFailureHandler(function(err) {
+        setRowLoading(fullNo, false);
+        showToast(`エラー：${err.message}`, 'error');
+      })
+      .approveDrawing(fullNo);
+  }
+
+  // 差戻しモーダル（単体）
+  function openRejectModal(fullNo, nameJp) {
+    rejectTargets = [{ fullNo, nameJp }];
+    document.getElementById('rejectModalTitle').textContent = '⚠️ 差戻し';
+    document.getElementById('rejectTargetNo').textContent = `${fullNo}　${nameJp}`;
+    document.getElementById('rejectReason').value = '';
+    document.getElementById('rejectModal').classList.add('active');
+    setTimeout(() => document.getElementById('rejectReason').focus(), 100);
+  }
+
+  function closeRejectModal() {
+    document.getElementById('rejectModal').classList.remove('active');
+    rejectTargets = [];
+  }
+
+  function submitReject() {
+    const reason = document.getElementById('rejectReason').value.trim();
+    if (!reason) {
+      document.getElementById('rejectReason').style.borderColor = '#c0392b';
+      return;
+    }
+    if (rejectTargets.length === 0) return;
+
+    document.getElementById('btnDoReject').disabled = true;
+
+    if (rejectTargets.length === 1) {
+      // 単体差戻し（既存API）
+      const fullNo = rejectTargets[0].fullNo;
+      google.script.run
+        .withSuccessHandler(function(result) {
+          document.getElementById('btnDoReject').disabled = false;
+          closeRejectModal();
+          if (result.success) {
+            showToast(result.message, 'success');
+            setTimeout(loadApprovals, 1500);
+          } else {
+            showToast(result.message, 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('btnDoReject').disabled = false;
+          showToast(`エラー：${err.message}`, 'error');
+        })
+        .rejectDrawing(fullNo, reason);
+    } else {
+      // 一括差戻し
+      const fullNoList = rejectTargets.map(t => t.fullNo);
+      google.script.run
+        .withSuccessHandler(function(result) {
+          document.getElementById('btnDoReject').disabled = false;
+          closeRejectModal();
+          showToast(result.message, result.success ? 'success' : 'error');
+          setTimeout(loadApprovals, 1500);
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('btnDoReject').disabled = false;
+          showToast(`エラー：${err.message}`, 'error');
+        })
+        .rejectDrawingsBulk(fullNoList, reason);
+    }
+  }
+
+  // 処理中は行のボタンを無効化
+  function setRowLoading(fullNo, loading) {
+    const rowId = 'row-' + fullNo.replace(/[^a-zA-Z0-9]/g,'_');
+    const row   = document.getElementById(rowId);
+    if (!row) return;
+    row.querySelectorAll('.btn').forEach(btn => btn.disabled = loading);
+  }
+
+  // AIチェック（参考情報）の詳細行の開閉
+  function toggleAiDetail(rowId) {
+    const row = document.getElementById('ai-detail-' + rowId);
+    if (!row) return;
+    row.classList.toggle('expanded');
+  }
+
+  // トースト通知
+  function showToast(msg, type) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className   = `toast ${type} show`;
+    setTimeout(() => { el.className = `toast ${type}`; }, 4000);
+  }
+
+  // XSS対策の簡易エスケープ（説明文はサーバー側で入力された自由記述のため）
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // モーダル外クリックで閉じる
+  document.getElementById('rejectModal').addEventListener('click', function(e) {
+    if (e.target === this) closeRejectModal();
+  });
+</script>
+</body>
+</html>

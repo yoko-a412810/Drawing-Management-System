@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Yu Gothic', 'Meiryo', sans-serif;
+      font-size: 13px;
+      background: #f8f9fa;
+      color: #333;
+      padding: 20px;
+    }
+
+    h2 {
+      font-size: 15px;
+      color: #1F4E79;
+      border-bottom: 2px solid #2E5C8A;
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+
+    .info-box {
+      background: #EBF3FB;
+      border: 1px solid #2E5C8A;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      font-size: 12px;
+      color: #1F4E79;
+    }
+
+    .info-box strong {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: bold;
+      color: #444;
+      margin-bottom: 4px;
+    }
+
+    label .required {
+      color: #c0392b;
+      margin-left: 3px;
+    }
+
+    select {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: inherit;
+      background: #fff;
+      transition: border-color 0.2s;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: #2E5C8A;
+      box-shadow: 0 0 0 2px rgba(46,92,138,0.12);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 70px;
+      padding: 7px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: inherit;
+      background: #fff;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: #2E5C8A;
+      box-shadow: 0 0 0 2px rgba(46,92,138,0.12);
+    }
+
+    .label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .btn-proofread {
+      background: #fff;
+      color: #2E5C8A;
+      border: 1.5px solid #2E5C8A;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-proofread:hover:not(:disabled) { background: #EBF3FB; }
+    .btn-proofread:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .proofread-box {
+      display: none;
+      margin-top: 8px;
+      border: 1px solid #cfe0f0;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .proofread-box.active { display: block; }
+    .proofread-col {
+      padding: 8px 10px;
+      font-size: 12px;
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
+    .proofread-col.original { background: #f5f5f5; color: #666; border-bottom: 1px solid #e0e0e0; }
+    .proofread-col.draft    { background: #EBF3FB; color: #1F4E79; }
+    .proofread-col .col-label {
+      display: block;
+      font-size: 10px;
+      font-weight: bold;
+      color: #888;
+      margin-bottom: 3px;
+    }
+    .proofread-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 8px 10px;
+      background: #fff;
+    }
+    .btn-adopt {
+      background: #2E5C8A;
+      color: #fff;
+      border: none;
+      padding: 5px 14px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .btn-adopt:hover { background: #1F4E79; }
+    .btn-discard {
+      background: #e0e0e0;
+      color: #333;
+      border: none;
+      padding: 5px 14px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .btn-discard:hover { background: #ccc; }
+
+    .btn-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    button {
+      padding: 8px 22px;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    #btnSubmit {
+      background: #2E5C8A;
+      color: #fff;
+    }
+
+    #btnSubmit:hover    { background: #1F4E79; }
+    #btnSubmit:disabled { background: #aaa; cursor: not-allowed; }
+
+    #btnCancel {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    #btnCancel:hover { background: #ccc; }
+
+    .msg {
+      margin-top: 10px;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      display: none;
+    }
+
+    .msg.error   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; display: block; }
+    .msg.loading { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; display: block; }
+    .msg.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: block; }
+  </style>
+</head>
+<body>
+
+<h2>📋 承認者を選択して一括登録</h2>
+
+<!-- 対象件数 -->
+<div class="info-box">
+  登録対象：<strong><?!= pendingCount ?></strong> 件の図面に、以下の承認者を一括設定して登録します。
+</div>
+
+<!-- 説明文 -->
+<div class="form-group">
+  <div class="label-row">
+    <label style="margin-bottom:0;">説明文（機械の大まかな説明）</label>
+    <button type="button" class="btn-proofread" id="btnProofread" onclick="runProofread()">✨ AIで添削</button>
+  </div>
+  <textarea id="description" placeholder="承認者が図面だけでは把握しづらい、機械の概要や用途などを記載してください（任意）"></textarea>
+  <div class="proofread-box" id="proofreadBox">
+    <div class="proofread-col original">
+      <span class="col-label">元の文章</span>
+      <span id="proofreadOriginal"></span>
+    </div>
+    <div class="proofread-col draft">
+      <span class="col-label">AIによる添削案</span>
+      <span id="proofreadDraft"></span>
+    </div>
+    <div class="proofread-actions">
+      <button type="button" class="btn-discard" onclick="discardProofread()">使わない</button>
+      <button type="button" class="btn-adopt" onclick="adoptProofread()">採用する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 検図者 -->
+<div class="form-group">
+  <label>検図者 <span class="required">*</span></label>
+  <select id="reviewer">
+    <option value="">― 選択してください ―</option>
+  </select>
+</div>
+
+<!-- 課長 -->
+<div class="form-group">
+  <label>課長 <span class="required">*</span></label>
+  <select id="manager">
+    <option value="">― 選択してください ―</option>
+  </select>
+</div>
+
+<!-- 部長 -->
+<div class="form-group">
+  <label>部長 <span class="required">*</span></label>
+  <select id="director">
+    <option value="">― 選択してください ―</option>
+  </select>
+</div>
+
+<div class="btn-row">
+  <button id="btnCancel" onclick="google.script.host.close()">キャンセル</button>
+  <button id="btnSubmit" onclick="submitForm()">登録する</button>
+</div>
+
+<div class="msg" id="msg"></div>
+
+<script>
+  const USER_LIST   = <?!= userList ?>;
+  const MAIN_NO     = <?!= mainNo ?>;
+  const DESCRIPTION = <?!= description ?>;
+
+  window.onload = function() {
+    const selectors = ['reviewer', 'manager', 'director'];
+    selectors.forEach(id => {
+      const sel = document.getElementById(id);
+      USER_LIST.forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u.name;
+        opt.textContent = u.name;
+        sel.appendChild(opt);
+      });
+    });
+
+    // 既に登録済みの説明文があれば、入力欄に初期表示する
+    if (DESCRIPTION) {
+      document.getElementById('description').value = DESCRIPTION;
+    }
+  };
+
+  // ── AIによる添削 ──
+  function runProofread() {
+    const text = document.getElementById('description').value.trim();
+    if (!text) {
+      showMsg('error', '添削する説明文を入力してください。');
+      return;
+    }
+    document.getElementById('btnProofread').disabled = true;
+    document.getElementById('btnProofread').textContent = '添削中…';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        document.getElementById('btnProofread').disabled = false;
+        document.getElementById('btnProofread').textContent = '✨ AIで添削';
+        if (!result.success) {
+          showMsg('error', result.message);
+          return;
+        }
+        document.getElementById('proofreadOriginal').textContent = result.original;
+        document.getElementById('proofreadDraft').textContent    = result.proofread;
+        document.getElementById('proofreadBox').classList.add('active');
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('btnProofread').disabled = false;
+        document.getElementById('btnProofread').textContent = '✨ AIで添削';
+        showMsg('error', `通信エラーが発生しました：${err.message}`);
+      })
+      .proofreadDescription(text);
+  }
+
+  // 添削案を採用し、入力欄へ反映する（人間の確認を経てからのみ反映される）
+  function adoptProofread() {
+    document.getElementById('description').value = document.getElementById('proofreadDraft').textContent;
+    document.getElementById('proofreadBox').classList.remove('active');
+  }
+
+  // 添削案を使わずに閉じる
+  function discardProofread() {
+    document.getElementById('proofreadBox').classList.remove('active');
+  }
+
+  function submitForm() {
+    const reviewer    = document.getElementById('reviewer').value;
+    const manager     = document.getElementById('manager').value;
+    const director    = document.getElementById('director').value;
+    const description = document.getElementById('description').value.trim();
+
+    if (!reviewer) { showMsg('error', '検図者を選択してください。'); return; }
+    if (!manager)  { showMsg('error', '課長を選択してください。'); return; }
+    if (!director) { showMsg('error', '部長を選択してください。'); return; }
+
+    document.getElementById('btnSubmit').disabled = true;
+    document.getElementById('btnCancel').disabled = true;
+    showMsg('loading', '登録処理中です。しばらくお待ちください…');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          showMsg('success', `✅ ${result.message}`);
+          setTimeout(() => google.script.host.close(), 2000);
+        } else {
+          document.getElementById('btnSubmit').disabled = false;
+          document.getElementById('btnCancel').disabled = false;
+          showMsg('error', `❌ ${result.message}`);
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('btnSubmit').disabled = false;
+        document.getElementById('btnCancel').disabled = false;
+        showMsg('error', `通信エラーが発生しました：${err.message}`);
+      })
+      .setApproversAndRegister({ reviewer, manager, director, description });
+  }
+
+  function showMsg(type, text) {
+    const el = document.getElementById('msg');
+    el.className        = 'msg ' + type;
+    el.style.whiteSpace = 'pre-wrap';
+    el.textContent      = text;
+  }
+</script>
+</body>
+</html>
